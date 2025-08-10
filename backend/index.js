@@ -29,7 +29,7 @@ app.use(session({
 }));
 
 app.use('/auth', authRoutes);
-app.use('/api/spotify', spotifyRoutes);
+app.use('/api', spotifyRoutes);
 
 // Auth status endpoint
 app.get('/api/auth/status', (req, res) => {
