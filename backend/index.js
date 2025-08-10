@@ -4,6 +4,7 @@ const axios = require('axios');
 const querystring = require('querystring');
 const session = require('express-session');
 const cors = require('cors');
+const { error } = require('console');
 
 const app = express();
 
@@ -42,7 +43,8 @@ app.get('/auth/login', (req, res) => {
     'user-read-private',
     'user-read-email',
     'playlist-modify-public',
-    'playlist-modify-private'
+    'playlist-modify-private',
+    'user-top-read',
   ].join(' ');
 
   const params = querystring.stringify({
@@ -115,7 +117,60 @@ app.post('/auth/logout', (req, res) => {
   });
 });
 
-console.log('About to start server on port', PORT);
+app.get('/api/spotify/profile', async (req, res) => {
+  const accessToken = req.session.access_token;
+  if (!accessToken) {
+    return res.status(401).json({error: "User not authenticated"});
+  }
+
+  try {
+    const response = await axios.get('https://api.spotify.com/v1/me', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    const {
+      explicit_content,
+      external_urls,
+      followers,
+      href,
+      images,
+      type,
+      ...filteredProfile
+    } = response.data;
+
+    res.json(filteredProfile);
+  } catch (error) {
+    console.error('Error fetching Spotify profile:', error.response?.data || error.message);
+    res.status(500).send('Failed to get Spotify profile');
+  }
+});
+
+app.get('/api/top-artists', async (req, res) => {
+  const accessToken = req.session.access_token;
+  if (!accessToken) {
+    return res.status(401).json({error: "User not authenticated"});
+  }
+
+  try {
+    const topArtistsResponse = await axios.get('https://api.spotify.com/v1/me/top/artists', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      params: {
+        limit: 25,
+        time_range: 'long_term' // Adjust as needed
+      },
+    });
+
+    res.json(topArtistsResponse.data.items);
+  } catch (error) {
+    console.error('Error fetching top artists:', error.response?.data || error.message);
+    res.status(500).send('Failed to get top artists');
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
