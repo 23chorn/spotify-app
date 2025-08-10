@@ -82,16 +82,11 @@ app.get('/auth/callback', async (req, res) => {
     req.session.access_token = tokenResponse.data.access_token;
     req.session.refresh_token = tokenResponse.data.refresh_token;
 
+    console.log('Access Token:', req.session.access_token);
+    console.log('Refresh Token:', req.session.refresh_token);
+
     // Show a success page instead of redirecting
-    res.send(`
-      <html>
-        <body>
-          <h2>Spotify authentication successful!</h2>
-          <p>Your session is now active. <br>
-          <a href="${FRONTEND_URL}/home">Continue to the app</a></p>
-        </body>
-      </html>
-    `);
+    res.redirect(`${FRONTEND_URL}/home`);
 
   } catch (error) {
     console.error('Error fetching tokens:', error.response?.data || error.message);
@@ -106,6 +101,18 @@ app.get('/api/auth/status', (req, res) => {
   } else {
     res.json({ loggedIn: false });
   }
+});
+
+// Logout route
+app.post('/auth/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      console.error('Error destroying session:', err);
+      return res.status(500).send('Failed to log out');
+    }
+    res.clearCookie('connect.sid'); // Clear the session cookie
+    res.send({ success: true });
+  });
 });
 
 console.log('About to start server on port', PORT);

@@ -4,11 +4,10 @@ import {
   Routes,
   Route,
   Navigate,
-  Link
 } from 'react-router-dom';
 
 // Set this to your backend LocalTunnel HTTPS URL
-const BACKEND_URL = 'http://localhost:3001';
+const BACKEND_URL = 'http://127.0.0.1:3001';
 
 function LoginPage() {
   return (
@@ -23,12 +22,25 @@ function LoginPage() {
 }
 
 function Home() {
+  const handleLogout = () => {
+    fetch(`${BACKEND_URL}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include', // Include cookies
+    })
+      .then(res => res.json())
+      .then(() => {
+        window.location.reload(); // Reload the page to reset the state
+      })
+      .catch(err => {
+        console.error('Error logging out:', err);
+      });
+  };
+
   return (
     <div>
       <h1>Welcome, you are logged in!</h1>
       <p>You can now explore Spotify features.</p>
-      {/* Simple log out: reloads page and resets session */}
-      <Link to="/" onClick={() => window.location.reload()}>Log out</Link>
+      <button onClick={handleLogout}>Log out</button>
     </div>
   );
 }
