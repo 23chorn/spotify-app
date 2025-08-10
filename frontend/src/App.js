@@ -1,40 +1,41 @@
 import React, { useEffect, useState } from 'react';
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from 'react-router-dom';
 
-// Set this to your backend LocalTunnel HTTPS URL
+// Set this to your backend URL
 const BACKEND_URL = 'http://127.0.0.1:3001';
 
-function LoginPage() {
-  return (
-    <div>
-      <h2>You are not logged in.</h2>
-      {/* Use backend LocalTunnel URL for Spotify login */}
-      <a href={`${BACKEND_URL}/auth/login`}>
-        <button>Login with Spotify</button>
-      </a>
-    </div>
-  );
-}
+function App() {
+  const [loggedIn, setLoggedIn] = useState(null);
 
-function Home() {
+  useEffect(() => {
+    fetch(`${BACKEND_URL}/api/auth/status`, {
+      credentials: 'include',
+    })
+      .then(res => res.json())
+      .then(data => setLoggedIn(data.loggedIn))
+      .catch(() => setLoggedIn(false));
+  }, []);
+
   const handleLogout = () => {
     fetch(`${BACKEND_URL}/auth/logout`, {
       method: 'POST',
-      credentials: 'include', // Include cookies
+      credentials: 'include',
     })
-      .then(res => res.json())
-      .then(() => {
-        window.location.reload(); // Reload the page to reset the state
-      })
-      .catch(err => {
-        console.error('Error logging out:', err);
-      });
+      .then(() => setLoggedIn(false))
+      .catch(console.error);
   };
+
+  if (loggedIn === null) return <p>Loading...</p>;
+
+  if (!loggedIn) {
+    return (
+      <div>
+        <h2>You are not logged in.</h2>
+        <a href={`${BACKEND_URL}/auth/login`}>
+          <button>Login with Spotify</button>
+        </a>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -42,36 +43,6 @@ function Home() {
       <p>You can now explore Spotify features.</p>
       <button onClick={handleLogout}>Log out</button>
     </div>
-  );
-}
-
-function App() {
-  const [loggedIn, setLoggedIn] = useState(null);
-
-  useEffect(() => {
-    fetch(`${BACKEND_URL}/api/auth/status`, {
-      credentials: 'include', // important to send cookies
-    })
-      .then(res => res.json())
-      .then(data => setLoggedIn(data.loggedIn))
-      .catch(() => setLoggedIn(false));
-  }, []);
-
-  if (loggedIn === null) return <p>Loading...</p>;
-
-  return (
-    <Router>
-      <Routes>
-        <Route
-          path="/"
-          element={loggedIn ? <Navigate to="/home" replace /> : <LoginPage />}
-        />
-        <Route
-          path="/home"
-          element={loggedIn ? <Home /> : <Navigate to="/" replace />}
-        />
-      </Routes>
-    </Router>
   );
 }
 
