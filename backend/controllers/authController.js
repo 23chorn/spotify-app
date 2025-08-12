@@ -14,6 +14,9 @@ exports.login = (req, res) => {
     'playlist-modify-public',
     'playlist-modify-private',
     'user-top-read',
+    'user-read-recently-played',
+    'playlist-read-private',
+    'playlist-read-collaborative'
   ].join(' ');
 
   const params = querystring.stringify({
@@ -59,12 +62,57 @@ exports.callback = async (req, res) => {
 };
 
 exports.logout = (req, res) => {
+  // Clear all session data
   req.session.destroy(err => {
     if (err) {
       console.error('Error destroying session:', err);
-      return res.status(500).send('Failed to log out');
+      return res.status(500).json({ error: 'Failed to log out' });
     }
-    res.clearCookie('connect.sid');
-    res.send({ success: true });
+    
+    // Clear the session cookie
+    res.clearCookie('connect.sid', {
+      path: '/',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    });
+
+    // Send JSON response with redirect URL
+    res.json({ 
+      success: true, 
+      redirectUrl: `${FRONTEND_URL}`  // Redirect to root instead of /home
+    });
   });
+};
+
+
+exports.refreshToken = async (req, res) => {
+  const refreshToken = req.session.refresh_token;
+  if (!refreshToken) return res.status(401).json({ error: 'No refresh token' });
+
+  try {
+    const tokenResponse = await axios({
+      method: 'post',
+      url: 'https://accounts.spotify.com/api/token',
+      data: querystring.stringify({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+      }),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: 'Basic ' + Buffer.from(client_id + ':' + client_secret).toString('base64'),
+      },
+    });
+
+    req.session.access_token = tokenResponse.data.access_token;
+    // refresh token sometimes not returned; keep existing if absent
+    if (tokenResponse.data.refresh_token) {
+      req.session.refresh_token = tokenResponse.data.refresh_token;
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error refreshing token:', err.response?.data || err.message);
+    return res.status(500).json({ error: 'Failed to refresh token' });
+  }
 };

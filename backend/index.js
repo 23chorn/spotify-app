@@ -5,6 +5,7 @@ const session = require('express-session');
 
 const authRoutes = require('./routes/authRoutes');
 const spotifyRoutes = require('./routes/spotifyRoutes');
+const catalogRoutes = require('./routes/catalogRoutes');
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use(session({
 
 app.use('/auth', authRoutes);
 app.use('/api', spotifyRoutes);
+app.use('/api/catalog', catalogRoutes);
 
 // Auth status endpoint
 app.get('/api/auth/status', (req, res) => {
